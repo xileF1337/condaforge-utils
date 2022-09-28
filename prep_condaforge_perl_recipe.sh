@@ -242,11 +242,11 @@ echo "Updating meta.yaml"
 perl -i 'BAK' "$(dirname "$0")/prep_condaforge_meta.pl" 'meta.yaml'
 
 cat <<END_OF_MSG
-All done. When you are ready, commit and try to build locally:
+All done. When you are ready, clean, commit and try to build locally:
 
-    rm *BAK &&
-    git commit . &&
-    cd ../.. &&
+    cd '$CF_REPO_DIR' &&
+    rm "recipes/$package/"*BAK &&
+    git commit recipes &&
     python3 ./build-locally.py linux64
 
 END_OF_MSG
