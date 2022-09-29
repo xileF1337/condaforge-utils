@@ -26,9 +26,6 @@ trap 'clean_and_die  1 "caught TERM signal"'    TERM
 ##                              Script options                              ##
 ##############################################################################
 
-# Directory of condaforge repo.
-CF_REPO_DIR='/home/felix/src/Conda/CondaForge/staged-recipes-fork'
-
 # Name and version of this script
 SCRIPT_NAME='prep_condaforge_perl_recipe.sh'
 SCRIPT_VERSION='v0.1'
@@ -37,7 +34,7 @@ SCRIPT_VERSION='v0.1'
 NO_POSITIONAL_ARGS=1
 
 # Set options to parse here. Colon (:) after letter means option has a value.
-OPT_STRING='vh'
+OPT_STRING='r:vh'
 
 HEADING=$( perl -e '        # Center string by adding padding spaces
     $line_length=78; $s="* * * @ARGV * * *"; $pad=($line_length-length $s)/2;
@@ -48,9 +45,10 @@ $HEADING
 
 Create a basic CondaForge recipe for a given Perl module.
 
-Usage:  $SCRIPT_NAME [ARGS]
+Usage:  $SCRIPT_NAME [ARGS] PERL_MODULE
 
 Arguments:  [...] denotes default values, xx doubles, ii ints, ss strings
+    -r:     Path to your fork of CondaForge staged-recipes repository. [.]
     -v:     Be verbose and show debug messages.
     -h:     Display this help and exit.
 EndOfUsage
@@ -121,10 +119,12 @@ indent() {
 ##############################################################################
 
 BE_VERBOSE=${BE_VERBOSE:+1}
-# n=$'\n'                 # Newline
-# t=$'\t'                 # Tab
 export LC_COLLATE='C'   # set sys language to C to avoid problems with sorting
 export LC_NUMERIC='C'   # also recognize '.' as decimal point
+
+# Directory of CondaForge repo.
+# cf_repo_dir='staged-recipes'
+cf_repo_dir='.'
 
 
 ##############################################################################
@@ -135,6 +135,8 @@ while getopts "$OPT_STRING" opt; do
     case $opt in
 #       e)
 #           example="$OPTARG" ;;
+        r)
+            cf_repo_dir="$OPTARG" ;;
         v)
             BE_VERBOSE=1 ;;
         h)
@@ -194,33 +196,43 @@ get_dist_version() {
 ##############################################################################
 
 # Check that our tools are available.
-check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm'
-perl -we 'use YAML' || die 'Install the Perl YAML module'
+check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm' 'git' \
+           'prep_condaforge_meta.pl'
+# perl -we 'use YAML' || die 'Install the Perl YAML module'
 
 ##### Prepare repo for new recipe
 # Change to CondaForge repo dir.
-echo "Working in repo '$CF_REPO_DIR'"
-cd "$CF_REPO_DIR"
+echo "### Working in CondaForge repo '$cf_repo_dir'"
+cd "$cf_repo_dir" ||
+    die 'Failed to enter repo, use -r to set the correct path.'
+[ -f 'conda-forge.yml' ] ||
+    die 'Could not find conda-forge.yml, is this really the CondaForge' \
+        'staged-recipes repo?'
 
 # Ensure worktree is clean
-[ -z "$(git status --short)" ] || die 'git status of repo not clean'
+git_stat="$(git status --short)" || die 'This is not a git repo!'
+[ -z "$git_stat" ] || die 'git status of repo not clean.'
 
-# Check package information and existance.
-dist_file=$(cpanm --info "$perl_module")    # dies if module non-existent
+# Check package information and existance. cpanm dies if module non-existent.
+# The PERL_MM_OPT variable needs to be set to silence a stupid warning.
+dist_file="$(PERL_MM_OPT=. cpanm --info "$perl_module")"
 ver="$(get_dist_version "$dist_file")"
 
 # Checkout new branch with package name.
 package="$(make_package_name "$perl_module")"
-echo "Making recipe for CondaForge package '$package' from Perl module" \
+echo "### Making recipe for CondaForge package '$package' from Perl module" \
      "'$perl_module' in distribution '$dist_file'"
+echo '### Updating main branch'
 git checkout main
 git pull upstream main ||
     die 'Could not update main branch. Make sure remote "upstream" exists' \
         'and links to CondaForge staged-recipes'
+echo '### Creating new branch'
 git checkout -b "$package"
 
 ##### Make initial recipe
 # Use conda skeleton to create initial recipe.
+echo '### Creating initial recipe using conda skeleton'
 cd 'recipes'
 conda skeleton cpan "$perl_module"
 cd "$package" ||
@@ -233,43 +245,45 @@ ver_dir="$(ls)"
     echo "WARNING: cpanm reported version '$ver', but conda skeleton" \
          "created directory '$ver_dir'. Check that recipe uses the latest"\
          "version!"
-mv "$ver_dir/*" '.'
+mv "$ver_dir"/* '.'
 rmdir "$ver_dir"
 
 ##### Update recipe to meet CondaForge standards.
 # Update build.sh
-echo "Updating build.sh"
-perl -i 'BAK' -wlne '
+echo "### Updating build.sh"
+perl -i'.BAK' -wlne '
     s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
     s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
     print unless /^\s*#/;                           # remove comment lines
 ' 'build.sh'
 
 # Update bld.bat (even though Windows builds are unsupported as of now).
-echo "Updating bld.bat"
-perl -i 'BAK' -wlne '
+echo "### Updating bld.bat"
+perl -i'.BAK' -wlne '
     s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
     s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
     print unless /^\s*::/;                          # remove comment lines
 ' 'bld.bat'
 
 # Update meta.yaml
-echo "Updating meta.yaml"
-perl -i 'BAK' "$(dirname "$0")/prep_condaforge_meta.pl" 'meta.yaml'
+echo "### Updating meta.yaml"
+perl -i'.BAK' "$(type -p prep_condaforge_meta.pl)" 'meta.yaml'
 
 # Report import tests such that the user can verify these work with the local
 # install of the module. Background: (1) not all modules defined in a dist can
 # be imported, and (2) the version of the main module sometimes does not
 # match that of submodules, which leads to a build fail in the CondaForge CI.
-imports=(grep -v '{[{%]' meta.yaml | shyaml get-values 'test.imports')
+echo '### Conda tests'
+imports=( $(grep -v '{[{%]' meta.yaml | shyaml get-values 'test.imports') )
 printf "%s\n" 'The following import tests will be done:' "${imports[@]}"
 
 cat <<END_OF_MSG
 All done. When you are ready, clean, commit and try to build locally:
 
-    cd '$CF_REPO_DIR' &&
+    cd '$cf_repo_dir' &&
     rm "recipes/$package/"*BAK &&
-    git commit recipes &&
+    git add recipes &&
+    git commit -m 'Added recipe for Perl module $package' &&
     python3 ./build-locally.py linux64
 
 END_OF_MSG
