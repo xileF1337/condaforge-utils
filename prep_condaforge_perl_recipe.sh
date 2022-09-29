@@ -182,12 +182,19 @@ make_package_name() {
     echo "perl-$perl_module" | tr 'A-Z' 'a-z' | sed 's/::/-/g'
 }
 
+# Extract the version from the dist file reported by `cpanm --info`.
+get_dist_version() {
+    local dist_file="$1" base
+    base="$(basename "$dist_file" '.tar.gz')"   # remove owner & tar.gz suffix
+    echo "${base##*-}"                  # version follows the last dash ('-')
+}
+
 ##############################################################################
 ##                                   Main                                   ##
 ##############################################################################
 
 # Check that our tools are available.
-check_exec 'conda' 'conda-skeleton' 'perl'
+check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm'
 perl -we 'use YAML' || die 'Install the Perl YAML module'
 
 ##### Prepare repo for new recipe
@@ -198,9 +205,14 @@ cd "$CF_REPO_DIR"
 # Ensure worktree is clean
 [ -z "$(git status --short)" ] || die 'git status of repo not clean'
 
+# Check package information and existance.
+dist_file=$(cpanm --info "$perl_module")    # dies if module non-existent
+ver="$(get_dist_version "$dist_file")"
+
 # Checkout new branch with package name.
 package="$(make_package_name "$perl_module")"
-echo "Making recipe for CondaForge package '$package' from Perl module '$perl_module'"
+echo "Making recipe for CondaForge package '$package' from Perl module" \
+     "'$perl_module' in distribution '$dist_file'"
 git checkout main
 git pull upstream main ||
     die 'Could not update main branch. Make sure remote "upstream" exists' \
@@ -215,8 +227,12 @@ cd "$package" ||
     die "conda skeleton did not create dir '$package'. The specified" \
         "module could be part of another distribution, check metacpan.org"
 
-# Move content out of version dir.
+# Move content out of version dir. Check we are using the latest version.
 ver_dir="$(ls)"
+[ "$ver" == "$ver_dir" ] ||
+    echo "WARNING: cpanm reported version '$ver', but conda skeleton" \
+         "created directory '$ver_dir'. Check that recipe uses the latest"\
+         "version!"
 mv "$ver_dir/*" '.'
 rmdir "$ver_dir"
 
@@ -240,6 +256,13 @@ perl -i 'BAK' -wlne '
 # Update meta.yaml
 echo "Updating meta.yaml"
 perl -i 'BAK' "$(dirname "$0")/prep_condaforge_meta.pl" 'meta.yaml'
+
+# Report import tests such that the user can verify these work with the local
+# install of the module. Background: (1) not all modules defined in a dist can
+# be imported, and (2) the version of the main module sometimes does not
+# match that of submodules, which leads to a build fail in the CondaForge CI.
+imports=(grep -v '{[{%]' meta.yaml | shyaml get-values 'test.imports')
+printf "%s\n" 'The following import tests will be done:' "${imports[@]}"
 
 cat <<END_OF_MSG
 All done. When you are ready, clean, commit and try to build locally:
