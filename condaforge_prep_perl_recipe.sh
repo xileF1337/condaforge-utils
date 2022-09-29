@@ -197,7 +197,7 @@ get_dist_version() {
 
 # Check that our tools are available.
 check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm' 'git' \
-           'prep_condaforge_meta.pl'
+           'condaforge_patch_meta.pl'
 # perl -we 'use YAML' || die 'Install the Perl YAML module'
 
 ##### Prepare repo for new recipe
