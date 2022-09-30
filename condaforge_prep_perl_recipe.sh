@@ -221,7 +221,7 @@ ver="$(get_dist_version "$dist_file")"
 # Checkout new branch with package name.
 package="$(make_package_name "$perl_module")"
 echo "### Making recipe for CondaForge package '$package' from Perl module" \
-     "'$perl_module' in distribution '$dist_file'"
+     "'$perl_module' (version $ver) in distribution '$dist_file'"
 echo '### Updating main branch'
 git checkout main
 git pull upstream main ||
@@ -234,7 +234,8 @@ git checkout -b "$package"
 # Use conda skeleton to create initial recipe.
 echo '### Creating initial recipe using conda skeleton'
 cd 'recipes'
-conda skeleton cpan "$perl_module"
+# Force the up-to-date version as reported by cpanm.
+conda skeleton cpan --version "$ver"  "$perl_module"
 cd "$package" ||
     die "conda skeleton did not create dir '$package'. The specified" \
         "module could be part of another distribution, check metacpan.org"
@@ -250,24 +251,28 @@ rmdir "$ver_dir"
 
 ##### Update recipe to meet CondaForge standards.
 # Update build.sh
-echo "### Updating build.sh"
+linux_build_script='build.sh'
+echo "### Updating $linux_build_script"
 perl -i'.BAK' -wlne '
     s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
     s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
     print unless /^\s*#/;                           # remove comment lines
-' 'build.sh'
+' "$linux_build_script"
 
 # Update bld.bat (even though Windows builds are unsupported as of now).
-echo "### Updating bld.bat"
+win_build_script='bld.bat'
+echo "### Updating $win_build_script"
 perl -i'.BAK' -wlne '
     s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
     s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
     print unless /^\s*::/;                          # remove comment lines
-' 'bld.bat'
+' "$win_build_script"
 
 # Update meta.yaml
-echo "### Updating meta.yaml"
-perl -i'.BAK' "$(type -p prep_condaforge_meta.pl)" 'meta.yaml'
+meta_file='meta.yaml'
+echo "### Updating $meta_file"
+cp "$meta_file" "$meta_file.BAK"    # make backup. perl -i does not work here
+condaforge_patch_meta.pl "$meta_file.BAK" > "$meta_file"
 
 # Report import tests such that the user can verify these work with the local
 # install of the module. Background: (1) not all modules defined in a dist can
