@@ -71,9 +71,14 @@ for (@meta) {
         next;
     }
     print;                      # writes to file thanks to -i switch
-    if (/^build:/) {
+    if (/^build:/) {            # build section
         print STDERR 'Adding skip: true for Windows builds';
         print q{ }x2, 'skip: true   # [win]';
+    }
+    if (/^\s+build:/) {         # requirements.build section
+        print STDERR 'Adding make dep, ensure this dist really needs it',
+            '(run cpanm --look MODULE: is there Makefile.PL?)';
+        print q{ }x4, '- make';
     }
     if (/^requirements:/) {
         if ($add_buildsec) {
