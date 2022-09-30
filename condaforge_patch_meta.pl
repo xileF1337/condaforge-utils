@@ -27,10 +27,13 @@ my @meta = <>;
 chomp @meta;
 
 # Pass 1: scan meta data and set options.
+# When checking deps, note that core module deps are usually commented out
+# but may still indicate certain requirements.
 my ($add_buildsec, $add_make, $add_c_comp, $version);
+my $dep_pfx = qr/^\s*(#\s*)?-/;  # match prefix of (commented out?) dep
 for (@meta) {
-    $add_buildsec = $add_make = 1   if /^\s*- perl-extutils-makemaker/;
-    $add_buildsec = $add_c_comp = 1 if /^\s*- perl-xsloader/;
+    $add_buildsec = $add_make = 1   if /$dep_pfx perl-extutils-makemaker/;
+    $add_buildsec = $add_c_comp = 1 if /$dep_pfx perl-(dynaloader|xsloader)/;
     $version = $1 if /^\{% set version = "([\d.]+)" %\}$/;
 }
 print STDERR 'WARNING: no version found' unless defined $version;
@@ -49,8 +52,8 @@ for (@meta) {
                   q{ }x4 . '- {{ environ["PREFIX"] }}/man/man1/perlgpl.1';
         next;
     }
-    if (/^\s*fn:/) {
-        print STDERR 'Skipping source.fn key';
+    if (/^\s*fn:/) {    # OBSOLETE for new conda skeleton versions
+        print STDERR 'Removing source.fn key';
         next;
     }
     if (/^\s*url:/ and defined $version) {
@@ -62,6 +65,10 @@ for (@meta) {
             print STDERR "WARNING: Could not subsitute version $version",
                          " in source.url key";
         }
+    }
+    if (/^\s*# /) {
+        print STDERR "Removing comment: $_",
+        next;
     }
     print;                      # writes to file thanks to -i switch
     if (/^build:/) {
@@ -86,6 +93,8 @@ for (@meta) {
 }
 
 # Add "extra" section with maintainer list.
+print STDERR "Adding 'extra' section with recipe-maintainers list ",
+             "(@maintainers)";
 print for q{}, 'extra:', q{ }x2 . 'recipe-maintainers:',
             map {q{ }x4 . "- $_"} @maintainers;
 
