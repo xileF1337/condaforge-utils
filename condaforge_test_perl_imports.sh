@@ -35,7 +35,7 @@ for mod in "$@"; do
     echo -n "### $mod: ";
     perl -we "
             use $mod;           # try to load module
-            print \$$mod::VERSION, q{ };
+            print 'version ', \$$mod::VERSION // 'undef', q{ };
         " && echo 'ok' || echo 'FAILED';
 done
 
