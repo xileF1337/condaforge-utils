@@ -34,7 +34,7 @@ SCRIPT_VERSION='v0.1'
 NO_POSITIONAL_ARGS=1
 
 # Set options to parse here. Colon (:) after letter means option has a value.
-OPT_STRING='r:vh'
+OPT_STRING='r:bvh'
 
 HEADING=$( perl -e '        # Center string by adding padding spaces
     $line_length=78; $s="* * * @ARGV * * *"; $pad=($line_length-length $s)/2;
@@ -48,7 +48,8 @@ Create a basic CondaForge recipe for a given Perl module.
 Usage:  $SCRIPT_NAME [ARGS] PERL_MODULE
 
 Arguments:  [...] denotes default values, xx doubles, ii ints, ss strings
-    -r:     Path to your fork of CondaForge staged-recipes repository. [.]
+    -r ss:  Path to your fork of CondaForge staged-recipes repository. [.]
+    -b:     Stay in the current branch instead of creating a new one.
     -v:     Be verbose and show debug messages.
     -h:     Display this help and exit.
 EndOfUsage
@@ -125,7 +126,7 @@ export LC_NUMERIC='C'   # also recognize '.' as decimal point
 # Directory of CondaForge repo.
 # cf_repo_dir='staged-recipes'
 cf_repo_dir='.'
-
+in_current_branch=      # do not switch to a new branch
 
 ##############################################################################
 ##                              Option parsing                              ##
@@ -137,6 +138,8 @@ while getopts "$OPT_STRING" opt; do
 #           example="$OPTARG" ;;
         r)
             cf_repo_dir="$OPTARG" ;;
+        b)
+            in_current_branch=1 ;;
         v)
             BE_VERBOSE=1 ;;
         h)
@@ -209,9 +212,8 @@ cd "$cf_repo_dir" ||
     die 'Could not find conda-forge.yml, is this really the CondaForge' \
         'staged-recipes repo?'
 
-# Ensure worktree is clean
+# Ensure this is a git repo
 git_stat="$(git status --short)" || die 'This is not a git repo!'
-[ -z "$git_stat" ] || die 'git status of repo not clean.'
 
 # Check package information and existance. cpanm dies if module non-existent.
 # The PERL_MM_OPT variable needs to be set to silence a stupid warning.
@@ -222,13 +224,18 @@ ver="$(get_dist_version "$dist_file")"
 package="$(make_package_name "$perl_module")"
 echo "### Making recipe for CondaForge package '$package' from Perl module" \
      "'$perl_module' (version $ver) in distribution '$dist_file'"
-echo '### Updating main branch'
-git checkout main
-git pull upstream main ||
-    die 'Could not update main branch. Make sure remote "upstream" exists' \
-        'and links to CondaForge staged-recipes'
-echo '### Creating new branch'
-git checkout -b "$package"
+if [ -z "$in_current_branch" ]; then
+    # Ensure worktree is clean
+    [ -z "$git_stat" ] || die 'git status of repo not clean.'
+
+    echo '### Updating main branch'
+    git checkout main
+    git pull upstream main ||
+        die 'Could not update main branch. Make sure remote "upstream" exists' \
+            'and links to CondaForge staged-recipes'
+    echo '### Creating new branch'
+    git checkout -b "$package"
+fi
 
 ##### Make initial recipe
 # Use conda skeleton to create initial recipe.
@@ -286,9 +293,9 @@ cat <<END_OF_MSG
 All done. When you are ready, clean, commit and try to build locally:
 
     cd '$cf_repo_dir' &&
-    rm "recipes/$package/"*BAK &&
-    git add recipes &&
-    git commit -m 'Added recipe for Perl module $package' &&
+    rm 'recipes/$package/'*BAK &&
+    git add 'recipes/$package' &&
+    git commit -m 'Added recipe $package for Perl module $perl_module' &&
     python3 ./build-locally.py linux64
 
 END_OF_MSG
