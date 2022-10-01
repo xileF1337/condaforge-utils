@@ -241,6 +241,7 @@ fi
 # Use conda skeleton to create initial recipe.
 echo '### Creating initial recipe using conda skeleton'
 cd 'recipes'
+[ -d "$package" ] && die "Dir recipes/$package/ exists already!"
 # Force the up-to-date version as reported by cpanm.
 conda skeleton cpan --version "$ver"  "$perl_module"
 cd "$package" ||
