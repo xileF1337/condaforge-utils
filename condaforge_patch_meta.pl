@@ -87,7 +87,7 @@ chomp @meta;
 my %mod_deps;
 if (defined $module_name) {
     eval { %mod_deps = get_module_deps($module_name) };
-    print "WARNING: $@";
+    print STDERR "WARNING: $@" if $@;
 }
 
 # Set options depending on deps.
