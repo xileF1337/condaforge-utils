@@ -293,10 +293,18 @@ printf "%s\n" 'The following import tests will be done:' "${imports[@]}"
 cat <<END_OF_MSG
 All done. When you are ready, clean, commit and try to build locally:
 
-    cd '$cf_repo_dir' &&
+    # Enter repo:
+    cd '$cf_repo_dir'
+
+    # Inspect recipe:
+    less 'recipes/$package/$meta_file'
+
+    # Clean and commit:
     rm 'recipes/$package/'*BAK &&
     git add 'recipes/$package' &&
     git commit -m 'Added recipe $package for Perl module $perl_module' &&
+
+    # Build locally:
     python3 ./build-locally.py linux64
 
 END_OF_MSG
