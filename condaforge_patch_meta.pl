@@ -55,8 +55,8 @@ sub get_module_deps {
 
     # Check than Cpanminus is availabl.
     eval { readpipe "cpanm --help" };
-    die 'Cannot retrieve module dependencies. Ensure Cpanminus (cpanm) is ',
-        'installed and in PATH' if @_;
+    die 'Could not run cpanm -h. Ensure App::Cpanminus is ',
+        'installed and cpanm is in PATH' if $@;
 
     # Get dependencies
     my @deps = readpipe "cpanm --showdeps '$perl_module'";
@@ -67,8 +67,9 @@ sub get_module_deps {
     # Remove trailing version
     s/~[.\d]+$// for @deps;
 
-    ...
+    return map {$_ => 1} @deps;
 }
+
 
 ##############################################################################
 ##                                   Main                                   ##
@@ -82,18 +83,27 @@ local $\ = "\n";                    # auto-append newline to print statements
 my @meta = <>;
 chomp @meta;
 
+# Retrieve dependencies of module.
+my %mod_deps;
 if (defined $module_name) {
-    ...;                # TODO add
+    eval { %mod_deps = get_module_deps($module_name) };
+    print "WARNING: $@";
 }
+
+# Set options depending on deps.
+my $add_make       = $mod_deps{'ExtUtils::MakeMaker'};
+my $add_c_comp     = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
+my $add_test_needs = $mod_deps{'Test::Needs'};
+my $add_test_fatal = $mod_deps{'Test::Fatal'};
 
 # Pass 1: scan meta data and set options.
 # When checking deps, note that core module deps are usually commented out
 # but may still indicate certain requirements.
-my ($add_buildsec, $add_make, $add_c_comp, $version);
-my $dep_pfx = qr/^\s*(#\s*)?-/;  # match prefix of (commented out?) dep
+my ($version);
+# my $dep_pfx = qr/^\s*(#\s*)?-/;  # match prefix of (commented out?) dep
 for (@meta) {
-    $add_buildsec = $add_make = 1   if /$dep_pfx perl-extutils-makemaker/;
-    $add_buildsec = $add_c_comp = 1 if /$dep_pfx perl-(dynaloader|xsloader)/;
+    # $add_make = 1   if /$dep_pfx perl-extutils-makemaker/;
+    # $add_c_comp = 1 if /$dep_pfx perl-(dynaloader|xsloader)/;
     $version = $1 if /^\{% set version = "([\d.]+)" %\}$/;
 }
 print STDERR 'WARNING: no version found' unless defined $version;
@@ -136,24 +146,21 @@ for (@meta) {
         print q{ }x2, 'skip: true   # [win]';
     }
     if (/^\s+build:/) {         # requirements.build section
-        print STDERR 'Adding make dep, ensure this dist really needs it',
-            '(run cpanm --look MODULE: is there Makefile.PL?)';
-        print q{ }x4, '- make';
+        print q{ }x4, '- make' and print STDERR 'Adding make dep'
+            if $add_make;
+        print q{ }x4, "- {{ compiler('c') }}"
+                and print STDERR 'Adding C compiler dep'
+            if $add_c_comp;
     }
-    if (/^requirements:/) {
-        if ($add_buildsec) {
-            print STDERR 'Adding requirements.build section';
-            print q{ }x2, 'build:';
-            if ($add_make) {
-                print STDERR 'Adding make dep';
-                print q{ }x4, '- make';
-            }
-            if ($add_c_comp) {
-                print STDERR 'Adding c compiler dep';
-                print q{ }x4, q[- {{ compiler('c') }}];
-            }
-            print q{};              # blank line
-        }
+    if (/^\s+host:/) {          # requirements.host section
+        print q{ }x4, '- perl-test-needs'
+                and print STDERR 'Adding Test::Needs dep'
+            if $add_test_needs;
+        print q{ }x4, '- perl-test-fatal'
+                and print STDERR 'Adding Test::Fatal dep'
+            if $add_test_fatal;
+    }
+    if (/^\s+run:/) {           # requirements.run section
     }
 }
 
