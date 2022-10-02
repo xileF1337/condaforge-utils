@@ -5,14 +5,70 @@
 
 use warnings;
 use strict;
+use autodie ':all';
+
+use Getopt::Long;
 
 ##############################################################################
 ##                                 Options                                  ##
 ##############################################################################
 
+my $usage = <<'END_OF_USAGE';
+                    * * * condaforge_patch_meta.pl * * *
+
+Prepare the file meta.yaml as created by `conda skeleton cpan
+Some::Perl::Module` to match the requirements of CondaForge.
+
+To improve the recipe and automatically add additional deps, provide the name
+of the Perl module of this recipe using the -m option. Note that
+App::Cpanminus (cpanm) is required to query CPAN.
+
+Usage: condaforge_patch_meta.pl [OPTS] meta.yaml
+
+Options:
+    -m, --module:
+        Name of the Perl module for the given meta.yaml file. It is used to
+        retrieve additional information using
+    -h, --help:     Show this help.
+END_OF_USAGE
+
+# Parse options
+my $module_name;
+my $show_help;
+GetOptions(
+    'module|m=s'    => \$module_name,
+    'help|h'        => \$show_help,
+) or (warn $usage and exit -1);
+print $usage and exit 0 if $show_help;
+
 # List of GitHub accoutns to be added to the maintainer list.
 my @maintainers = qw(xileF1337 cbrueffer);
 
+
+##############################################################################
+##                                Functions                                 ##
+##############################################################################
+
+# Retrieve dependencies of the given Perl module.
+sub get_module_deps {
+    my ($perl_module) = @_;
+
+    # Check than Cpanminus is availabl.
+    eval { readpipe "cpanm --help" };
+    die 'Cannot retrieve module dependencies. Ensure Cpanminus (cpanm) is ',
+        'installed and in PATH' if @_;
+
+    # Get dependencies
+    my @deps = readpipe "cpanm --showdeps '$perl_module'";
+    chomp @deps;
+    die "Could not retrieve dependencies for Perl module '$perl_module'"
+        unless @deps;   # deps should at least contain perl and makemaker etc
+
+    # Remove trailing version
+    s/~[.\d]+$// for @deps;
+
+    ...
+}
 
 ##############################################################################
 ##                                   Main                                   ##
@@ -25,6 +81,10 @@ local $\ = "\n";                    # auto-append newline to print statements
 # Read input meta.yaml line-wise.
 my @meta = <>;
 chomp @meta;
+
+if (defined $module_name) {
+    ...;                # TODO add
+}
 
 # Pass 1: scan meta data and set options.
 # When checking deps, note that core module deps are usually commented out
