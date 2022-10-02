@@ -107,7 +107,7 @@ my $add_module_build  = $mod_deps{'Module::Build'};
 # There seems to be a general problem with Test::* module deps, better print
 # all that we find but not yet handle explicitly.
 my @unhandled_test_mods = do {
-    my %handled = map {'Test::' . $_  => 1} qw(More Needs Fatal Requires);
+    my %handled = map {'Test::' . $_  => 1} qw(Needs Fatal Requires);
     grep {/^Test::/ and not $handled{$_} and not is_core($_)} keys %mod_deps;
 };
 print STDERR join "\n" . q{ }x4, 'WARNING: unhandled Test::* module(s):',

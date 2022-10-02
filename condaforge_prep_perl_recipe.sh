@@ -305,7 +305,7 @@ All done. When you are ready, clean, commit and try to build locally:
     # Clean and commit:
     rm 'recipes/$package/'*BAK &&
     git add 'recipes/$package' &&
-    git commit -m 'Added recipe $package for Perl module $perl_module' &&
+    git commit -m 'Added recipe $package for Perl module $perl_module'
 
     # Build locally:
     python3 ./build-locally.py linux64
