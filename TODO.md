@@ -17,3 +17,7 @@ Report or fix the following issues:
         - Data for 2022-09-20:
           Module::Build was first released with perl v5.9.4, deprecated (will
           be CPAN-only) in v5.19.0 and removed from v5.21.0
+    - same for its dep inc::latest:
+        - Data for 2022-09-20:
+          inc::latest was first released with perl v5.11.2, deprecated (will
+          be CPAN-only) in v5.19.4 and removed from v5.21.0
