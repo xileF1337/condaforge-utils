@@ -8,6 +8,7 @@ use strict;
 use autodie ':all';
 
 use Getopt::Long;
+use Module::CoreList;
 
 ##############################################################################
 ##                                 Options                                  ##
@@ -70,6 +71,11 @@ sub get_module_deps {
     return map {$_ => 1} @deps;
 }
 
+# Is the given module a core module?
+sub is_core {
+    my ($module) = @_;
+    return Module::CoreList::is_core($module);
+}
 
 ##############################################################################
 ##                                   Main                                   ##
@@ -91,11 +97,22 @@ if (defined $module_name) {
 }
 
 # Set options depending on deps.
-my $add_make         = $mod_deps{'ExtUtils::MakeMaker'};
-my $add_c_comp       = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
-my $add_test_needs   = $mod_deps{'Test::Needs'};
-my $add_test_fatal   = $mod_deps{'Test::Fatal'};
-my $add_module_build = $mod_deps{'Module::Build'};
+my $add_make          = $mod_deps{'ExtUtils::MakeMaker'};
+my $add_c_comp        = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
+my $add_test_needs    = $mod_deps{'Test::Needs'};
+my $add_test_fatal    = $mod_deps{'Test::Fatal'};
+my $add_test_requires = $mod_deps{'Test::Requires'};
+my $add_module_build  = $mod_deps{'Module::Build'};
+
+# There seems to be a general problem with Test::* module deps, better print
+# all that we find but not yet handle explicitly.
+my @unhandled_test_mods = do {
+    my %handled = map {'Test::' . $_  => 1} qw(More Needs Fatal Requires);
+    grep {/^Test::/ and not $handled{$_} and not is_core($_)} keys %mod_deps;
+};
+print STDERR join "\n" . q{ }x4, 'WARNING: unhandled Test::* module(s):',
+                                 @unhandled_test_mods
+    if @unhandled_test_mods;
 
 # Pass 1: scan meta data and set options.
 # When checking deps, note that core module deps are usually commented out
@@ -160,6 +177,9 @@ for (@meta) {
         print q{ }x4, '- perl-test-fatal'
                 and print STDERR 'Adding Test::Fatal dep'
             if $add_test_fatal;
+        print q{ }x4, '- perl-test-requires'
+                and print STDERR 'Adding Test::Requires dep'
+            if $add_test_requires;
         print q{ }x4, '- perl-module-build'
                 and print STDERR 'Adding Module::Build dep'
             if $add_module_build;
