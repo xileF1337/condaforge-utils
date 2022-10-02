@@ -91,10 +91,11 @@ if (defined $module_name) {
 }
 
 # Set options depending on deps.
-my $add_make       = $mod_deps{'ExtUtils::MakeMaker'};
-my $add_c_comp     = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
-my $add_test_needs = $mod_deps{'Test::Needs'};
-my $add_test_fatal = $mod_deps{'Test::Fatal'};
+my $add_make         = $mod_deps{'ExtUtils::MakeMaker'};
+my $add_c_comp       = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
+my $add_test_needs   = $mod_deps{'Test::Needs'};
+my $add_test_fatal   = $mod_deps{'Test::Fatal'};
+my $add_module_build = $mod_deps{'Module::Build'};
 
 # Pass 1: scan meta data and set options.
 # When checking deps, note that core module deps are usually commented out
@@ -159,6 +160,9 @@ for (@meta) {
         print q{ }x4, '- perl-test-fatal'
                 and print STDERR 'Adding Test::Fatal dep'
             if $add_test_fatal;
+        print q{ }x4, '- perl-module-build'
+                and print STDERR 'Adding Module::Build dep'
+            if $add_module_build;
     }
     if (/^\s+run:/) {           # requirements.run section
     }
