@@ -246,7 +246,10 @@ cd 'recipes'
 conda skeleton cpan --version "$ver"  "$perl_module"
 cd "$package" ||
     die "conda skeleton did not create dir '$package'. The specified" \
-        "module could be part of another distribution, check metacpan.org"
+        "module could be part of another distribution (try \`cpanm --info" \
+        "$perl_module\`), or a core module (try \`corelist $perl_module\`," \
+        "where corelist is from Module::CoreList), or this is a conda" \
+        "skeleton bug (happens often enough)."
 
 # Move content out of version dir. Check we are using the latest version.
 ver_dir="$(ls)"
