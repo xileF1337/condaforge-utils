@@ -280,7 +280,7 @@ perl -i'.BAK' -wlne '
 meta_file='meta.yaml'
 echo "### Updating $meta_file"
 cp "$meta_file" "$meta_file.BAK"    # make backup. perl -i does not work here
-condaforge_patch_meta.pl "$meta_file.BAK" > "$meta_file"
+condaforge_patch_meta.pl -m "$perl_module" "$meta_file.BAK" > "$meta_file"
 
 # Report import tests such that the user can verify these work with the local
 # install of the module. Background: (1) not all modules defined in a dist can
