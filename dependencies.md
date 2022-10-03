@@ -33,7 +33,8 @@
         - perl-sub-identify [ok]
         - perl-file-pushd [ok]
         - perl-namespace-clean [ok]
-            - perl-b-hooks-endofscope
+            - perl-b-hooks-endofscope [ok]
+                - perl-variable-magic [ok]
     - perl-cpan-meta-check [ok]
         - perl-test-deep [ok]
     - perl-test-fatal [in Moo pull request]
