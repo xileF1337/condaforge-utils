@@ -29,7 +29,7 @@ Usage: condaforge_patch_meta.pl [OPTS] meta.yaml
 Options:
     -m, --module:
         Name of the Perl module for the given meta.yaml file. It is used to
-        retrieve additional information using
+        retrieve additional information using cpanm (install App::Cpanminus!).
     -h, --help:     Show this help.
 END_OF_USAGE
 
@@ -128,16 +128,28 @@ print STDERR 'WARNING: no version found' unless defined $version;
 
 # Pass 2: modify and print.
 for (@meta) {
-    if (/^\s*license:/) {
-        print STDERR 'Adding default Perl license';
-        print STDERR 'WARNING: license key value was NOT perl_5, please ',
-                     'double-check that license information is correct!'
-            unless /perl_5$/;
+    if (/^\s*license:\s*(.*)$/) {
+        my $license = $1;
+        if ($license eq 'artistic_2') {
+            print STDERR 'Adding Artistic license 2';
+            print STDERR 'WARNING: Ensure license is packaged in file ',
+                         'LICENSE (run cpanm --look MODULE) or change value!';
+            print foreach
+                q{ }x2 . 'license: Artistic-2.0',
+                q{ }x2 . 'license_file: LICENSE',
+        }
+        else { # add default Perl 5 license in other cases
+            print STDERR 'Adding default Perl license';
+            print STDERR "WARNING: license key value was '$license', please ",
+                         'double-check that license information is correct!'
+                unless $license eq 'perl_5';
 
-        print for q{ }x2 . 'license: GPL-1.0-or-later OR Artistic-1.0-Perl',
-                  q{ }x2 . 'license_file:',
-                  q{ }x4 . '- {{ environ["PREFIX"] }}/man/man1/perlartistic.1',
-                  q{ }x4 . '- {{ environ["PREFIX"] }}/man/man1/perlgpl.1';
+            print foreach
+                q{ }x2 . 'license: GPL-1.0-or-later OR Artistic-1.0-Perl',
+                q{ }x2 . 'license_file:',
+                q{ }x4 . '- {{ environ["PREFIX"] }}/man/man1/perlartistic.1',
+                q{ }x4 . '- {{ environ["PREFIX"] }}/man/man1/perlgpl.1';
+        }
         next;
     }
     if (/^\s*fn:/) {    # OBSOLETE for new conda skeleton versions
