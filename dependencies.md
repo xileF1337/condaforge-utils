@@ -1,0 +1,40 @@
+## TODO: port these packages and its deps
+
+- perl-moose
+    - perl-class-load-xs [ok]
+        - perl-class-load [ok]
+    - perl-package-stash [ok]
+        - perl-module-implementation [ok]
+    - perl-dist-checkconflicts [ok]
+        - perl-module-runtime [ok]
+    - perl-mro-compat [ok]
+    - perl-params-util [ok]
+        - perl-test-leaktrace [ok]
+    #
+    - perl-data-optlist [ok]
+        - perl-sub-install [ok]
+    - perl-module-runtime-conflicts [ok]
+    - perl-module-runtime [ok]
+        - perl-module-build [ok]
+            - perl-inc-latest [ok]
+    - perl-class-load [ok]
+    - perl-eval-closure [ok]
+        - perl-test-requires [ok]
+    #
+    - perl-devel-overloadinfo [ok]
+    - perl-package-stash-xs [ok]
+    - perl-package-deprecationmanager [ok]
+        - perl-test-warnings [ok]
+    - perl-devel-stacktrace [ok]
+    - perl-sub-exporter [ok]
+    - perl-devel-globaldestruction [ok]
+        - perl-sub-exporter-progressive [ok]
+    - perl-test-cleannamespaces [ok]
+        - perl-sub-identify [ok]
+        - perl-file-pushd [ok]
+        - perl-namespace-clean [ok]
+            - perl-b-hooks-endofscope
+    - perl-cpan-meta-check [ok]
+        - perl-test-deep [ok]
+    - perl-test-fatal [in Moo pull request]
+
