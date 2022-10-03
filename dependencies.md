@@ -25,6 +25,7 @@
     - perl-package-stash-xs [ok]
     - perl-package-deprecationmanager [ok]
         - perl-test-warnings [ok]
+        - perl-sub-name
     - perl-devel-stacktrace [ok]
     - perl-sub-exporter [ok]
     - perl-devel-globaldestruction [ok]
