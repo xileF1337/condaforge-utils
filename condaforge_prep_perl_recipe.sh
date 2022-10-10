@@ -88,17 +88,6 @@ assert_file_exists() {
         die "$file_description '$file_name' $message"
 }
 
-# For a list of executables, check whether each one is available in path.
-check_exec() {
-    for name in "$@"; do
-        local type="$(type -t "$name")"
-        if [ -z "$type" ]; then
-            echo "Could not find '$name', make sure it is available!" 1>&2
-            exit 1
-        fi
-    done
-}
-
 # Print a message if global variable is set, usually via -v switch
 dbgm() {
     if [ -n "${BE_VERBOSE-}" ]; then
@@ -194,6 +183,26 @@ get_dist_version() {
     echo "${base##*-}"                  # version follows the last dash ('-')
 }
 
+# For a list of executables, check whether each one is available in path.
+check_exec() {
+    for name in "$@"; do
+        local type="$(type -t "$name")"
+        if [ -z "$type" ]; then
+            echo "Could not find '$name', make sure it is available!" 1>&2
+            exit 1
+        fi
+    done
+}
+
+# Check we can load all of a given list of Perl modules
+check_perl_mod() {
+    for module in "$@"; do
+        perl -we "use $module" ||
+            die "Please install Perl module '$module' (run \`cpanm $module\`)."
+    done
+}
+
+
 ##############################################################################
 ##                                   Main                                   ##
 ##############################################################################
@@ -201,7 +210,7 @@ get_dist_version() {
 # Check that our tools are available.
 check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm' 'git' \
            'condaforge_patch_meta.pl'
-# perl -we 'use YAML' || die 'Install the Perl YAML module'
+check_perl_mod 'autodie qw(:all)'
 
 ##### Prepare repo for new recipe
 # Change to CondaForge repo dir.
