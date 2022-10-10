@@ -210,7 +210,7 @@ check_perl_mod() {
 # Check that our tools are available.
 check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm' 'git' \
            'condaforge_patch_meta.pl'
-check_perl_mod 'autodie qw(:all)'
+check_perl_mod 'autodie qw(:all)' 'YAML'
 
 ##### Prepare repo for new recipe
 # Change to CondaForge repo dir.

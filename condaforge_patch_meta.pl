@@ -10,6 +10,8 @@ use autodie ':all';
 use Getopt::Long;
 use Module::CoreList;
 
+use YAML ();
+
 ##############################################################################
 ##                                 Options                                  ##
 ##############################################################################
@@ -77,6 +79,25 @@ sub is_core {
     return Module::CoreList::is_core($module);
 }
 
+# Parse a YAML file, given line by line (including newlines).
+sub parse_yaml {
+    my (@meta) = @_;
+
+    # We remove lines starting with {% (=Jinja var defs) and remove {{ and }}
+    # (=Jinja var substitutions).
+    my $meta = join q{}, map {s/[{][{] //; s/ [}][}]//; $_} grep {not /^[{]%/}
+                                                                 @meta;
+    return %{ YAML::Load($meta) };
+}
+
+# Thats a heuristic!! Convert conda package name to perl module name.
+sub pkg_to_mod_name {
+    my ($pkg) = @_;
+
+    ...;
+
+}
+
 ##############################################################################
 ##                                   Main                                   ##
 ##############################################################################
@@ -85,8 +106,11 @@ die 'Pass a single meta.yaml file' unless @ARGV == 1;
 
 local $\ = "\n";                    # auto-append newline to print statements
 
-# Read input meta.yaml line-wise.
+# Read input meta.yaml line-wise. The parsed data structure is only used for
+# look-ups; the file content is printed vanilla and only modified under
+# explicitely defined conditions.
 my @meta = <>;
+my %yaml = parse_yaml(@meta);
 chomp @meta;
 
 # Retrieve dependencies of module.
@@ -127,7 +151,15 @@ for (@meta) {
 print STDERR 'WARNING: no version found' unless defined $version;
 
 # Pass 2: modify and print.
+my $cur_block = q{};            # current top-level "block" we are in
 for (@meta) {
+    if (/^(\w+):$/) {           # keep track of current top-level block
+        $cur_block = $1;
+        print q{};              # print a blank line (only) before new block
+    }
+    if (/^\s*$/) {
+        next;                   # remove all other blank lines
+    }
     if (/^\s*license:\s*(.*)$/) {
         my $license = $1;
         if ($license eq 'artistic_2') {
@@ -167,36 +199,52 @@ for (@meta) {
         }
     }
     if (/^\s*# /) {
-        print STDERR "Removing comment: $_",
+        print STDERR "Removing comment: $_";
         next;
     }
-    print;                      # writes to file thanks to -i switch
+    if ($cur_block eq 'requirements') {
+        if (/^\s+build:/) {         # requirements.build section
+            print STDERR 'Skipping empty requirements.build key' and next
+                unless $yaml{requirements}{build} or $add_c_comp or $add_make;
+        }
+    }
+
+    print;                      # print current line
+
     if (/^build:/) {            # build section
         print STDERR 'Adding skip: true for Windows builds';
         print q{ }x2, 'skip: true   # [win]';
     }
-    if (/^\s+build:/) {         # requirements.build section
-        print q{ }x4, '- make' and print STDERR 'Adding make dep'
-            if $add_make;
-        print q{ }x4, "- {{ compiler('c') }}"
-                and print STDERR 'Adding C compiler dep'
-            if $add_c_comp;
-    }
-    if (/^\s+host:/) {          # requirements.host section
-        print q{ }x4, '- perl-test-needs'
-                and print STDERR 'Adding Test::Needs dep'
-            if $add_test_needs;
-        print q{ }x4, '- perl-test-fatal'
-                and print STDERR 'Adding Test::Fatal dep'
-            if $add_test_fatal;
-        print q{ }x4, '- perl-test-requires'
-                and print STDERR 'Adding Test::Requires dep'
-            if $add_test_requires;
-        print q{ }x4, '- perl-module-build'
-                and print STDERR 'Adding Module::Build dep'
-            if $add_module_build;
-    }
-    if (/^\s+run:/) {           # requirements.run section
+    if ($cur_block eq 'requirements') {
+        if (/^\s+build:/) {         # requirements.build section
+            print q{ }x4, '- make' and print STDERR 'Adding make dep'
+                if $add_make;
+            print q{ }x4, "- {{ compiler('c') }}"
+                    and print STDERR 'Adding C compiler dep'
+                if $add_c_comp;
+        }
+        if (/^\s+host:/) {          # requirements.host section
+            print q{ }x4, '- perl-test-needs'
+                    and print STDERR 'Adding Test::Needs dep'
+                if $add_test_needs;
+            print q{ }x4, '- perl-test-fatal'
+                    and print STDERR 'Adding Test::Fatal dep'
+                if $add_test_fatal;
+            print q{ }x4, '- perl-test-requires'
+                    and print STDERR 'Adding Test::Requires dep'
+                if $add_test_requires;
+            print q{ }x4, '- perl-module-build'
+                    and print STDERR 'Adding Module::Build dep'
+                if $add_module_build;
+        }
+        if (/^\s+run:/) {           # requirements.run section
+        }
+        if (/^\s+#- ([-\w]+)$/) {            # commented out requirement.
+            my $dep = $1;
+            my $mod_name = pkg_to_mod_name($dep); # that one may be wrong!
+            print STDERR "WARNING: found commented out  non-core module dep '$dep'"
+                unless is_core($mod_name);
+        }
     }
 }
 
