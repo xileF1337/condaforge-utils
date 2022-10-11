@@ -41,7 +41,7 @@ my $show_help;
 GetOptions(
     'module|m=s'    => \$module_name,
     'help|h'        => \$show_help,
-) or (warn $usage and exit -1);
+) or (print STDERR $usage and exit -1);
 print $usage and exit 0 if $show_help;
 
 # List of GitHub accoutns to be added to the maintainer list.
@@ -91,11 +91,14 @@ sub parse_yaml {
 }
 
 # Thats a heuristic!! Convert conda package name to perl module name.
+# Chomp of leader perl-, replace dashes (-) by double colons (::) and convert
+# the first letter of each part to upper case. This fails for modules
+# containing upper-case letters in any other position.
 sub pkg_to_mod_name {
     my ($pkg) = @_;
 
-    ...;
-
+    $pkg =~ s/^perl-//;
+    return join "::", map {ucfirst} split /-/, $pkg;
 }
 
 ##############################################################################
@@ -118,6 +121,9 @@ my %mod_deps;
 if (defined $module_name) {
     eval { %mod_deps = get_module_deps($module_name) };
     print STDERR "WARNING: $@" if $@;
+}
+else {
+    print STDERR "WARNING: no module name provided (-m), cannot do some checks.";
 }
 
 # Set options depending on deps.
@@ -209,9 +215,9 @@ for (@meta) {
         }
     }
 
-    print;                      # print current line
+    print;                          # print current line
 
-    if (/^build:/) {            # build section
+    if (/^build:/) {                # build section
         print STDERR 'Adding skip: true for Windows builds';
         print q{ }x2, 'skip: true   # [win]';
     }
@@ -239,12 +245,17 @@ for (@meta) {
         }
         if (/^\s+run:/) {           # requirements.run section
         }
-        if (/^\s+#- ([-\w]+)$/) {            # commented out requirement.
-            my $dep = $1;
-            my $mod_name = pkg_to_mod_name($dep); # that one may be wrong!
-            print STDERR "WARNING: found commented out  non-core module dep '$dep'"
-                unless is_core($mod_name);
-        }
+        # # These commented out deps are likely due to the convention of
+        # # enabling (weak) run exports for Perl modules. This means that a
+        # # given module is automatically added as a runtime requirement (in the
+        # # same version!) when it is added as a build requirement. This means
+        # # we don't have to add it explicitely as a runtime dep.
+        # if (/^\s+#- ([-\w]+)$/) {   # commented out requirement.
+        #     my $dep = $1;
+        #     my $mod_name = pkg_to_mod_name($dep); # that one may be wrong!
+        #     print STDERR "WARNING: found commented out (possibly) non-core module dep '$dep'"
+        #         unless is_core($mod_name);
+        # }
     }
 }
 
