@@ -276,7 +276,7 @@ echo "### Updating $linux_build_script"
 perl -i'.BAK' -wlne '
     s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
     s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
-    print unless /^\s*#/;                           # remove comment lines
+    print unless /^\s*#[^!]?/;      # remove comment lines, but no shebangs
 ' "$linux_build_script"
 
 # Update bld.bat (even though Windows builds are unsupported as of now).
