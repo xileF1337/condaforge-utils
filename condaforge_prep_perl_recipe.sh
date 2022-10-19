@@ -319,6 +319,9 @@ All done. When you are ready, clean, commit and try to build locally:
     # Build locally:
     python3 ./build-locally.py linux64
 
+    # Open PR on GitHub, and once building finishes, post a comment including:
+    #       @conda-forge/help-perl, ready for review!
+
 END_OF_MSG
 
 exit 0                                          # EOF
