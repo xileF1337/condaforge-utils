@@ -7,6 +7,9 @@
 *.pm.tdy
 *.bs
 
+# Editor temp files
+.*.swp
+
 # Devel::Cover
 cover_db/
 
@@ -33,3 +36,4 @@ inc/
 /MANIFEST.bak
 /pm_to_blib
 /*.zip
+
