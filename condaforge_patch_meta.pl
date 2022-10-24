@@ -260,6 +260,7 @@ for (@meta) {
             my $url = $1;
             print STDERR "Trying to resolve home URL $url ...";
             print q{ }x2, 'home: ', resolve_url_redirect($url);
+            next;
         }
     }
 
