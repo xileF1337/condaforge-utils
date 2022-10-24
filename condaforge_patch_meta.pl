@@ -60,18 +60,19 @@ my @maintainers = qw(xileF1337 cbrueffer);
 sub get_module_deps {
     my ($perl_module) = @_;
 
-    # Check than Cpanminus is availabl.
-    eval { readpipe "cpanm --help" };
-    die 'Could not run cpanm -h. Ensure App::Cpanminus is ',
-        'installed and cpanm is in PATH' if $@;
+    # Check than Cpanminus is available.
+    readpipe "cpanm --help"
+        or die 'Could not run cpanm -h. Ensure App::Cpanminus is ',
+               'installed and cpanm is in PATH';
 
     # Get dependencies
-    my @deps = readpipe "cpanm --showdeps '$perl_module'";
+    my @deps = readpipe "cpanm --showdeps --quiet '$perl_module'";
+    die "Could not retrieve dependencies, 'cpanm --showdeps $perl_module' ",
+            "failed."
+        if $?;
     chomp @deps;
-    die "Could not retrieve dependencies for Perl module '$perl_module'"
-        unless @deps;   # deps should at least contain perl and makemaker etc
 
-    # Remove trailing version
+    # Remove trailing version number.
     s/~[.\d]+$// for @deps;
 
     return map {$_ => 1} @deps;
@@ -163,6 +164,7 @@ if (defined $module_name) {
 else {
     print STDERR "WARNING: no module name provided (-m), cannot do some checks.";
 }
+# print STDERR "Deps:", map {"\n  - $_"} sort keys %mod_deps; # print all deps
 
 # Set options depending on deps.
 my $add_make          = $mod_deps{'ExtUtils::MakeMaker'};
