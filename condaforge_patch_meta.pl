@@ -118,14 +118,14 @@ sub resolve_url_redirect {
     my $req = HTTP::Request->new(GET => $url);
 
     # Perform the HTTP request.
-    my $response = $ua->request($req);
+    my $res = $ua->request($req);           # response object
 
     # Check for errors and return result.
-    if ($response->is_success) {
+    if ($res->is_success) {
         # There may be a row of requests, the last one has the resolved URL.
         # The return value is the URI (URL) as a blessed string. Concatenation
         # removes the blessing.
-        my $resolved_url = $response->request->uri . q{};
+        my $resolved_url = $res->request->uri . q{};
 
         # Inform user if the resolved URL differs from the input.
         print STDERR "Updating with resolved URL $resolved_url"
@@ -134,7 +134,8 @@ sub resolve_url_redirect {
         return $resolved_url;
     }
     else {
-        print STDERR "WARNING: Could not resolve URL! Appending BROKEN tags.";
+        print STDERR "WARNING: Could not resolve URL (", $res->status_line,
+            ")! Appending BROKEN tags.";
         return "<BROKEN>$url</BROKEN>";
     }
 }
