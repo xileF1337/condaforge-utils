@@ -8,7 +8,11 @@ use strict;
 use autodie ':all';
 
 use Getopt::Long;
-use Module::CoreList;
+use Module::CoreList;       # Check for core modules
+
+# To verify URLs and resolve redirects:
+use HTTP::Request;
+use LWP::UserAgent;
 
 use YAML ();
 
@@ -100,6 +104,38 @@ sub pkg_to_mod_name {
     $pkg =~ s/^perl-//;
     return join "::", map {ucfirst} split /-/, $pkg;
 }
+
+
+# Given a URL, perform a GET request on it and print messages if (1) the
+# request fails, or (2) if the request is redirected. Returns the URL with the
+# redirection resolved (if any), or the URL within "BROKEN" tags on errors.
+sub resolve_url_redirect {
+    my ($url) = @_;
+
+    # Prepare a HTTP request to retrieve the URL.
+    my $ua = LWP::UserAgent->new();
+    my $req = HTTP::Request->new(GET => $url);
+
+    # Perform the HTTP request.
+    my $response = $ua->request($req);
+
+    # Check for errors and return result.
+    if ($response->is_success) {
+        # There may be a row of requests, the last one has the resolved URL.
+        my $resolved_url = $response->request->uri;
+
+        # Inform user if the resolved URL differs from the input.
+        print STDERR "Updating with resolved URL $resolved_url"
+            unless $url eq $resolved_url;
+
+        return $resolved_url;
+    }
+    else {
+        print STDERR "WARNING: Could not resolve URL!";
+        return "<BROKEN>$url</BROKEN>";
+    }
+}
+
 
 ##############################################################################
 ##                                   Main                                   ##
@@ -212,6 +248,18 @@ for (@meta) {
         if (/^\s+build:/) {         # requirements.build section
             print STDERR 'Skipping empty requirements.build key' and next
                 unless $yaml{requirements}{build} or $add_c_comp or $add_make;
+        }
+        if (/^\s+#- ([-\w]+)$/) {   # commented out requirement
+            # Skip these lines, for the reason, see below (requirements.run).
+            print STDERR "Skipping commented out requirement: $_";
+            next;
+        }
+    }
+    if ($cur_block eq 'about') {
+        if (/^\s*home:\s*(.*)$/) {
+            my $url = $1;
+            print STDERR "Trying to resolve home URL $url ...";
+            print q{ }x2, 'home: ', resolve_url_redirect($url);
         }
     }
 
