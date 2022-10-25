@@ -364,7 +364,7 @@ my %no_warn_mod = map {$_ => 1} qw(
     B::COW
     List::Util
     Module::Build
-    Perl
+    perl
     Scalar::Util
     Test::Fatal
     Test::Needs
