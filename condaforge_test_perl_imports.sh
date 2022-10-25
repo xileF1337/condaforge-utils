@@ -32,6 +32,7 @@ die()  { echo   "ERROR: $*" 1>&2; exit 1; }
     die 'Pass name(s) of Perl module(s) for which to test import'
 
 for mod in "$@"; do
+    [ "$mod" == '-' ] && continue   # skip over '-' when pasting YAML file
     echo -n "### $mod: ";
     perl -we "
             use $mod;           # try to load module
