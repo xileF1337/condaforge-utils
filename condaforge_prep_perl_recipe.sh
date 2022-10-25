@@ -343,7 +343,13 @@ All done. When you are ready, clean, commit and try to build locally:
     time python3 ./build-locally.py linux64
 
     # Open PR on GitHub, and once building finishes, post a comment including:
-    #       @conda-forge/help-perl, ready for review!
+
+    @conda-forge/bioconda-recipes I port this to CondaForge if there are no objections from your site.
+
+    @cbrueffer Do you agree to be a maintainer of this package? I would also appreciate your review!
+
+
+    @conda-forge/help-perl, ready for review!
 
 END_OF_MSG
 
