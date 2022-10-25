@@ -1,7 +1,23 @@
 #!/bin/bash
-# File  : prep_condaforge_perl_recipe.sh
-# Author: Felix Kuehnl
+# File  : condaforge_prep_perl_recipe.sh
+# Author/Copyright: Felix Kuehnl
 # Date  : 2022-09-28
+
+# This program is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program, cf. file `COPYING`. If not, see
+# <https://www.gnu.org/licenses/>.
+#
+##############################################################################
 
 # Strict mode: die on non-0 exit codes (-e) or when dereferencing unset
 # variables (-u), propagate ERR traps to subshells (-E), and make pipes return
@@ -116,6 +132,9 @@ export LC_NUMERIC='C'   # also recognize '.' as decimal point
 # cf_repo_dir='staged-recipes'
 cf_repo_dir='.'
 in_current_branch=      # do not switch to a new branch
+# Path to script that does Perl import tests:
+import_checker='condaforge_test_perl_imports.sh'
+
 
 ##############################################################################
 ##                              Option parsing                              ##
@@ -209,7 +228,7 @@ check_perl_mod() {
 
 # Check that our tools are available.
 check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm' 'git' \
-           'condaforge_patch_meta.pl'
+           'condaforge_patch_meta.pl' 'shyaml'
 check_perl_mod 'autodie qw(:all)' 'YAML' 'HTTP::Request' 'LWP::UserAgent' \
                'LWP::Protocol::https'
 
@@ -301,7 +320,9 @@ condaforge_patch_meta.pl -m "$perl_module" "$meta_file.BAK" > "$meta_file"
 # match that of submodules, which leads to a build fail in the CondaForge CI.
 echo '### Conda tests'
 imports=( $(grep -v '{[{%]' meta.yaml | shyaml get-values 'test.imports') )
-printf "%s\n" 'The following import tests will be done:' "${imports[@]}"
+echo -e "To verify the import tests, run:\n\n$import_checker \\"
+printf '    %s \\\n' "${imports[@]}"
+echo -e "\n"
 
 cat <<END_OF_MSG
 All done. When you are ready, clean, commit and try to build locally:
@@ -318,7 +339,7 @@ All done. When you are ready, clean, commit and try to build locally:
     git commit -m 'Added recipe $package for Perl module $perl_module'
 
     # Build locally:
-    python3 ./build-locally.py linux64
+    time python3 ./build-locally.py linux64
 
     # Open PR on GitHub, and once building finishes, post a comment including:
     #       @conda-forge/help-perl, ready for review!
