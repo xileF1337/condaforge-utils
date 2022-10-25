@@ -364,16 +364,15 @@ my %no_warn_mod = map {$_ => 1} qw(
     B::COW
     List::Util
     Module::Build
+    Perl
     Scalar::Util
     Test::Fatal
     Test::Needs
     Test::Requires
 );
 for my $noncore_mod_dep (sort grep {not is_core($_)} keys %mod_deps) {
-    print STDERR "next: $noncore_mod_dep";
     next if $no_warn_mod{$noncore_mod_dep};
     my $noncore_pkg = mod_name_to_pkg($noncore_mod_dep);
-    print STDERR "    pkg name: $noncore_pkg";
     unless ($dep_pkg_seen{$noncore_pkg}) {
         print STDERR "WARNING: module depends on $noncore_mod_dep, but ",
                      "requirement $noncore_pkg not found in recipe";
