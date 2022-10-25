@@ -134,6 +134,7 @@ cf_repo_dir='.'
 in_current_branch=      # do not switch to a new branch
 # Path to script that does Perl import tests:
 import_checker='condaforge_test_perl_imports.sh'
+editor='nvim'
 
 
 ##############################################################################
@@ -331,7 +332,7 @@ All done. When you are ready, clean, commit and try to build locally:
     cd '$cf_repo_dir'
 
     # Inspect recipe:
-    less 'recipes/$package/$meta_file'
+    $editor recipes/$package/$meta_file
 
     # Clean and commit:
     rm 'recipes/$package/'*BAK &&
