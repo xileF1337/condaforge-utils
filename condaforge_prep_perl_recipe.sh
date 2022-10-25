@@ -209,7 +209,7 @@ check_perl_mod() {
 
 # Check that our tools are available.
 check_exec 'conda' 'conda-skeleton' 'perl' 'cpanm' 'git' \
-           'condaforge_patch_meta.pl'
+           'condaforge_patch_meta.pl' 'shyaml'
 check_perl_mod 'autodie qw(:all)' 'YAML' 'HTTP::Request' 'LWP::UserAgent' \
                'LWP::Protocol::https'
 
