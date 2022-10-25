@@ -125,6 +125,14 @@ sub pkg_to_mod_name {
     return join "::", map {ucfirst} split /-/, $pkg;
 }
 
+# Convert the module name to the Conda package name. This should be exact.
+sub mod_name_to_pkg {
+    my ($mod) = @_;
+
+    # Prepend perl-, to lower case, subst :: to -
+    my $pkg = 'perl-' . lc ($mod =~  s/::/-/gr);
+    return $pkg;
+}
 
 # Given a URL, perform a GET request on it and print messages if (1) the
 # request fails, or (2) if the request is redirected. Returns the URL with the
@@ -196,10 +204,11 @@ else {
 # Set options depending on deps.
 my $add_make          = $mod_deps{'ExtUtils::MakeMaker'};
 my $add_c_comp        = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
-my $add_test_needs    = $mod_deps{'Test::Needs'};
-my $add_test_fatal    = $mod_deps{'Test::Fatal'};
-my $add_test_requires = $mod_deps{'Test::Requires'};
+my $add_b_cow         = $mod_deps{'B::COW'};
 my $add_module_build  = $mod_deps{'Module::Build'};
+my $add_test_fatal    = $mod_deps{'Test::Fatal'};
+my $add_test_needs    = $mod_deps{'Test::Needs'};
+my $add_test_requires = $mod_deps{'Test::Requires'};
 
 # There seems to be a general problem with Test::* module deps, better print
 # all that we find but not yet handle explicitly.
@@ -225,6 +234,7 @@ print STDERR 'WARNING: no version found' unless defined $version;
 
 # Pass 2: modify and print.
 my $cur_block = q{};            # current top-level "block" we are in
+my %dep_pkg_seen;               # store all deps we've seen here
 for (@meta) {
     if (/^(\w+):$/) {           # keep track of current top-level block
         $cur_block = $1;
@@ -285,6 +295,10 @@ for (@meta) {
             print STDERR "Skipping commented out requirement: $_";
             next;
         }
+        if (/^\s+- (.*)$/) {        # a single requirement / dependency
+            my $dep = $1;
+            $dep_pkg_seen{$dep} = 1;    # take note we have seen it
+        }
     }
     if ($cur_block eq 'about') {
         if (/^\s*home:\s*(.*)$/) {
@@ -310,18 +324,21 @@ for (@meta) {
                 if $add_c_comp;
         }
         if (/^\s+host:/) {          # requirements.host section
-            print q{ }x4, '- perl-test-needs'
-                    and print STDERR 'Adding Test::Needs dep'
-                if $add_test_needs;
-            print q{ }x4, '- perl-test-fatal'
-                    and print STDERR 'Adding Test::Fatal dep'
-                if $add_test_fatal;
-            print q{ }x4, '- perl-test-requires'
-                    and print STDERR 'Adding Test::Requires dep'
-                if $add_test_requires;
             print q{ }x4, '- perl-module-build'
                     and print STDERR 'Adding Module::Build dep'
                 if $add_module_build;
+            print q{ }x4, '- perl-b-cow'
+                    and print STDERR 'Adding B::COW dep'
+                if $add_b_cow;
+            print q{ }x4, '- perl-test-fatal'
+                    and print STDERR 'Adding Test::Fatal dep'
+                if $add_test_fatal;
+            print q{ }x4, '- perl-test-needs'
+                    and print STDERR 'Adding Test::Needs dep'
+                if $add_test_needs;
+            print q{ }x4, '- perl-test-requires'
+                    and print STDERR 'Adding Test::Requires dep'
+                if $add_test_requires;
         }
         if (/^\s+run:/) {           # requirements.run section
         }
@@ -339,10 +356,36 @@ for (@meta) {
     }
 }
 
+# Check that we have seen all the non-core requirements. A list of exceptions
+# for which the check is skipped is used for common modules that are part of a
+# differently named core distribution, or that are already handled explicitly,
+# and thus would trigger false alarms.
+my %no_warn_mod = map {$_ => 1} qw(
+    B::COW
+    List::Util
+    Module::Build
+    Scalar::Util
+    Test::Fatal
+    Test::Needs
+    Test::Requires
+);
+for my $noncore_mod_dep (sort grep {not is_core($_)} keys %mod_deps) {
+    print STDERR "next: $noncore_mod_dep";
+    next if $no_warn_mod{$noncore_mod_dep};
+    my $noncore_pkg = mod_name_to_pkg($noncore_mod_dep);
+    print STDERR "    pkg name: $noncore_pkg";
+    unless ($dep_pkg_seen{$noncore_pkg}) {
+        print STDERR "WARNING: module depends on $noncore_mod_dep, but ",
+                     "requirement $noncore_pkg not found in recipe";
+    }
+}
+
 # Add "extra" section with maintainer list.
 print STDERR "Adding 'extra' section with recipe-maintainers list ",
              "(@maintainers)";
 print for q{}, 'extra:', q{ }x2 . 'recipe-maintainers:',
             map {q{ }x4 . "- $_"} @maintainers;
+
+
 
 exit 0;                         #EoF
