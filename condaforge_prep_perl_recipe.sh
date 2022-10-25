@@ -116,6 +116,9 @@ export LC_NUMERIC='C'   # also recognize '.' as decimal point
 # cf_repo_dir='staged-recipes'
 cf_repo_dir='.'
 in_current_branch=      # do not switch to a new branch
+# Path to script that does Perl import tests:
+import_checker='condaforge_test_perl_imports.sh'
+
 
 ##############################################################################
 ##                              Option parsing                              ##
@@ -301,7 +304,9 @@ condaforge_patch_meta.pl -m "$perl_module" "$meta_file.BAK" > "$meta_file"
 # match that of submodules, which leads to a build fail in the CondaForge CI.
 echo '### Conda tests'
 imports=( $(grep -v '{[{%]' meta.yaml | shyaml get-values 'test.imports') )
-printf "%s\n" 'The following import tests will be done:' "${imports[@]}"
+echo -e "To verify the import tests, run:\n\n$import_checker \\"
+printf '    %s \\\n' "${imports[@]}"
+echo -e "\n"
 
 cat <<END_OF_MSG
 All done. When you are ready, clean, commit and try to build locally:
@@ -318,7 +323,7 @@ All done. When you are ready, clean, commit and try to build locally:
     git commit -m 'Added recipe $package for Perl module $perl_module'
 
     # Build locally:
-    python3 ./build-locally.py linux64
+    time python3 ./build-locally.py linux64
 
     # Open PR on GitHub, and once building finishes, post a comment including:
     #       @conda-forge/help-perl, ready for review!
