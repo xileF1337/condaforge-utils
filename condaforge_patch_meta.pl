@@ -164,7 +164,7 @@ sub resolve_url_redirect {
         if ($url =~ m{^http://metacpan.org/pod/}) {
             # Special treament for common URL error types.
             $url =~ s{^http:}{https:};   # use https instead of http
-            $url =~ s{-}{::};            # use :: instead of - in URL
+            $url =~ s{-}{::}g;           # use :: instead of - in URL
             print STDERR "Failed, but trying again with patched url $url";
             return resolve_url_redirect($url);
         }
