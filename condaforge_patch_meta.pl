@@ -92,7 +92,7 @@ sub get_module_deps {
     chomp @deps;
 
     # Remove trailing version number.
-    s/~[.\d]+$// for @deps;
+    s/~v?[.\d]+$// for @deps;
 
     return map {$_ => 1} @deps;
 }
