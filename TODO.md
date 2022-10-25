@@ -21,3 +21,8 @@ Report or fix the following issues:
         - Data for 2022-09-20:
           inc::latest was first released with perl v5.11.2, deprecated (will
           be CPAN-only) in v5.19.4 and removed from v5.21.0
+    - [issue](https://github.com/conda/conda-build/issues/4591) and
+      [PR](https://github.com/conda/conda-build/pull/4592)
+- C compiler deps are not properly added when XS files are found
+    - [issue](https://github.com/conda/conda-build/issues/4598) and
+      [PR](https://https://github.com/conda/conda-build/pull/4599)
