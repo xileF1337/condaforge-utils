@@ -153,6 +153,13 @@ sub resolve_url_redirect {
         return $resolved_url;
     }
     else {
+        if ($url =~ m{^http://metacpan.org/pod/}) {
+            # Special treament for common URL error types.
+            $url =~ s{^http:}{https:};   # use https instead of http
+            $url =~ s{-}{::};            # use :: instead of - in URL
+            print STDERR "Failed, but trying again with patched url $url";
+            return resolve_url_redirect($url);
+        }
         print STDERR "WARNING: Could not resolve URL (", $res->status_line,
             ")! Appending BROKEN tags.";
         return "<BROKEN>$url</BROKEN>";
