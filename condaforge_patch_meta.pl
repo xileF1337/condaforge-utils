@@ -202,23 +202,20 @@ else {
 # print STDERR "Deps:", map {"\n  - $_"} sort keys %mod_deps; # print all deps
 
 # Set options depending on deps.
-my $add_make          = $mod_deps{'ExtUtils::MakeMaker'};
-my $add_c_comp        = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
-my $add_b_cow         = $mod_deps{'B::COW'};
-my $add_module_build  = $mod_deps{'Module::Build'};
-my $add_test_fatal    = $mod_deps{'Test::Fatal'};
-my $add_test_needs    = $mod_deps{'Test::Needs'};
-my $add_test_requires = $mod_deps{'Test::Requires'};
+my $add_make   = $mod_deps{'ExtUtils::MakeMaker'};
+my $add_c_comp = $mod_deps{'XSLoader'} || $mod_deps{'DynaLoader'};
 
-# There seems to be a general problem with Test::* module deps, better print
-# all that we find but not yet handle explicitly.
-my @unhandled_test_mods = do {
-    my %handled = map {'Test::' . $_  => 1} qw(Needs Fatal Requires);
-    grep {/^Test::/ and not $handled{$_} and not is_core($_)} keys %mod_deps;
-};
-print STDERR join "\n" . q{ }x4, 'WARNING: unhandled Test::* module(s):',
-                                 @unhandled_test_mods
-    if @unhandled_test_mods;
+# List of modules that are known to be "evasive", i.e. they are (eroneously)
+# not added by conda skeleton, probably because it thinks they are in core.
+my @evasive_mods = qw(
+    B::COW
+    Module::Build
+    Test::Fatal
+    Test::Needs
+    Test::Requires
+);
+# Add all evasive modules that are dependencies as additional requirements.
+my @additional_reqs = grep {$mod_deps{$_}} @evasive_mods;
 
 # Pass 1: scan meta data and set options.
 # When checking deps, note that core module deps are usually commented out
@@ -324,21 +321,10 @@ for (@meta) {
                 if $add_c_comp;
         }
         if (/^\s+host:/) {          # requirements.host section
-            print q{ }x4, '- perl-module-build'
-                    and print STDERR 'Adding Module::Build dep'
-                if $add_module_build;
-            print q{ }x4, '- perl-b-cow'
-                    and print STDERR 'Adding B::COW dep'
-                if $add_b_cow;
-            print q{ }x4, '- perl-test-fatal'
-                    and print STDERR 'Adding Test::Fatal dep'
-                if $add_test_fatal;
-            print q{ }x4, '- perl-test-needs'
-                    and print STDERR 'Adding Test::Needs dep'
-                if $add_test_needs;
-            print q{ }x4, '- perl-test-requires'
-                    and print STDERR 'Adding Test::Requires dep'
-                if $add_test_requires;
+            for my $add_req (@additional_reqs) {
+                print q{ }x4, '- ', mod_name_to_pkg($add_req)
+                    and print STDERR "Adding $add_req dep";
+            }
         }
         if (/^\s+run:/) {           # requirements.run section
         }
@@ -360,16 +346,7 @@ for (@meta) {
 # for which the check is skipped is used for common modules that are part of a
 # differently named core distribution, or that are already handled explicitly,
 # and thus would trigger false alarms.
-my %no_warn_mod = map {$_ => 1} qw(
-    B::COW
-    List::Util
-    Module::Build
-    perl
-    Scalar::Util
-    Test::Fatal
-    Test::Needs
-    Test::Requires
-);
+my %no_warn_mod = map {$_ => 1} @evasive_mods, qw(perl);
 for my $noncore_mod_dep (sort grep {not is_core($_)} keys %mod_deps) {
     next if $no_warn_mod{$noncore_mod_dep};
     my $noncore_pkg = mod_name_to_pkg($noncore_mod_dep);
