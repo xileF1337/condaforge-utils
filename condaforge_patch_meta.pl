@@ -191,7 +191,9 @@ my %yaml = parse_yaml(@meta);
 chomp @meta;
 
 # Retrieve dependencies of module.
-my %mod_deps;
+my %mod_deps_from_yaml  # retrieved from original, incomplete meta.yaml file
+    = map {$_ => 1} @{ $yaml{requirements}{host} };
+my %mod_deps;           # retrieved from CPAN (should be much more complete)
 if (defined $module_name) {
     eval { %mod_deps = get_module_deps($module_name) };
     print STDERR "WARNING: $@" if $@;
@@ -214,6 +216,15 @@ my @evasive_mods = qw(
     Test::Needs
     Test::Requires
 );
+# Do a sanity check; we should not find any of these modules, otherwise we add
+# them a second time.
+if (my @evasive_found = grep {$mod_deps_from_yaml{$_}}
+                        map {mod_name_to_pkg($_)} @evasive_mods) {
+    print STDERR "WARNING: The following evasive modules where found in the",
+                 "recipe and are thus probably added twice (consider ",
+                 "removing them from the evasive mod list):";
+    print STDERR join "\n", map {"    $_"} @evasive_found;
+}
 # Add all evasive modules that are dependencies as additional requirements.
 my @additional_reqs = grep {$mod_deps{$_}} @evasive_mods;
 
