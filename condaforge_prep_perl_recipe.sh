@@ -222,6 +222,22 @@ check_perl_mod() {
     done
 }
 
+# Patch build.sh and bld.bat.
+patch_build_script() {
+    local build_script="$1"
+    perl -i'.BAK' -wlne '
+        s/--installdirs site/--installdirs vendor/; # install to vendor dir
+        s/INSTALLDIRS=site/INSTALLDIRS=vendor/;     # ...instead of site
+        ($blankline = 1), next if /^\s*$/;       # remove multi-blank lines
+        next if /^\s*(::|#$|#[^!])/;        # remove non-shebang comment lines
+        # Add only a single blank line, and only if we have seen a non-blank one
+        print q{} and $blankline=0 if $blankline and $nonblank_seen;
+        $nonblank_seen = 1;
+        $blankline = 0;                     # this is not a blank line
+        print;
+    ' "$build_script"
+}
+
 
 ##############################################################################
 ##                                   Main                                   ##
@@ -294,20 +310,12 @@ rmdir "$ver_dir"
 # Update build.sh
 linux_build_script='build.sh'
 echo "### Updating $linux_build_script"
-perl -i'.BAK' -wlne '
-    s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
-    s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
-    print unless /^\s*#[^!]?/;      # remove comment lines, but no shebangs
-' "$linux_build_script"
+patch_build_script "$linux_build_script"
 
 # Update bld.bat (even though Windows builds are unsupported as of now).
 win_build_script='bld.bat'
 echo "### Updating $win_build_script"
-perl -i'.BAK' -wlne '
-    s/--installdirs site/--installdirs vendor/;     # install to vendor dir...
-    s/INSTALLDIRS=site/INSTALLDIRS=vendor/;         # ...instead of site
-    print unless /^\s*::/;                          # remove comment lines
-' "$win_build_script"
+patch_build_script "$win_build_script"
 
 # Update meta.yaml
 meta_file='meta.yaml'
@@ -354,4 +362,3 @@ All done. When you are ready, clean, commit and try to build locally:
 END_OF_MSG
 
 exit 0                                          # EOF
-
