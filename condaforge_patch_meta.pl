@@ -68,7 +68,7 @@ GetOptions(
 print $usage and exit 0 if $show_help;
 
 # List of GitHub accoutns to be added to the maintainer list.
-my @maintainers = qw(xileF1337 cbrueffer);
+my @maintainers = qw(xileF1337 conda-forge/perl-packagers);
 
 
 ##############################################################################

@@ -334,30 +334,33 @@ printf '    %s \\\n' "${imports[@]}"
 echo -e "\n"
 
 cat <<END_OF_MSG
-All done. When you are ready, clean, commit and try to build locally:
+### All done. When you are ready, clean, commit and try to build locally:
 
-    # Enter repo:
-    cd '$cf_repo_dir'
-
-    # Inspect recipe:
-    $editor recipes/$package/$meta_file
-
-    # Clean and commit:
-    rm 'recipes/$package/'*BAK &&
-    git add 'recipes/$package' &&
-    git commit -m 'Added recipe $package for Perl module $perl_module'
-
-    # Build locally:
-    time python3 ./build-locally.py linux64
-
-    # Open PR on GitHub, and once building finishes, post a comment including:
-
-    @conda-forge/bioconda-recipes I port this to CondaForge if there are no objections from your site.
-
-    @cbrueffer Do you agree to be a maintainer of this package? I would also appreciate your review!
+# Enter repo:
+cd '$cf_repo_dir'
 
 
-    @conda-forge/help-perl, ready for review!
+# Inspect recipe:
+$editor recipes/$package/$meta_file
+
+
+# Clean and commit:
+rm 'recipes/$package/'*BAK &&
+git add 'recipes/$package' &&
+git commit -m 'Added recipe $package for Perl module $perl_module'
+
+
+# Build locally:
+time python3 ./build-locally.py linux64
+
+
+# Open PR on GitHub, and once building finishes, post a comment including:
+
+@conda-forge/bioconda-recipes I port this to CondaForge if there are no objections from your site.
+
+@cbrueffer and @conda-forge/perl-packagers: As usual, I would appreciate your review!
+
+@conda-forge/help-perl, ready for review!
 
 END_OF_MSG
 
