@@ -50,7 +50,7 @@ SCRIPT_VERSION='v0.1'
 NO_POSITIONAL_ARGS=1
 
 # Set options to parse here. Colon (:) after letter means option has a value.
-OPT_STRING='r:bvh'
+OPT_STRING='r:bBvh'
 
 HEADING=$( perl -e '        # Center string by adding padding spaces
     $line_length=78; $s="* * * @ARGV * * *"; $pad=($line_length-length $s)/2;
@@ -128,13 +128,18 @@ BE_VERBOSE=${BE_VERBOSE:+1}
 export LC_COLLATE='C'   # set sys language to C to avoid problems with sorting
 export LC_NUMERIC='C'   # also recognize '.' as decimal point
 
-# Directory of CondaForge repo.
-# cf_repo_dir='staged-recipes'
-cf_repo_dir='.'
+# Directory of CondaForge/Bioconda recipes repo.
+repo_dir='.'        # usually it is called from within the repo
 in_current_branch=      # do not switch to a new branch
 # Path to script that does Perl import tests:
 import_checker='condaforge_test_perl_imports.sh'
 editor='nvim'
+
+# Set defaults for CondaForge, but allow option -B to use BioConda instead.
+service_name='CondaForge'
+main_branch='main'      # name of the main branch (main or master)
+ci_conf_file='conda-forge.yml'
+
 
 
 ##############################################################################
@@ -146,9 +151,15 @@ while getopts "$OPT_STRING" opt; do
 #       e)
 #           example="$OPTARG" ;;
         r)
-            cf_repo_dir="$OPTARG" ;;
+            repo_dir="$OPTARG" ;;
         b)
             in_current_branch=1 ;;
+        B)
+            # Bioconda mode: work in a Bioconda recipe repo
+            service_name='BioConda'
+            ci_conf_file='azure-pipeline.yml'
+            main_branch='master'
+            ;;
         v)
             BE_VERBOSE=1 ;;
         h)
@@ -250,13 +261,13 @@ check_perl_mod 'autodie qw(:all)' 'YAML' 'HTTP::Request' 'LWP::UserAgent' \
                'LWP::Protocol::https'
 
 ##### Prepare repo for new recipe
-# Change to CondaForge repo dir.
-echo "### Working in CondaForge repo '$cf_repo_dir'"
-cd "$cf_repo_dir" ||
+# Change to CondaForge/Bioconda repo dir.
+echo "### Working in $service_name repo '$repo_dir'"
+cd "$repo_dir" ||
     die 'Failed to enter repo, use -r to set the correct path.'
-[ -f 'conda-forge.yml' ] ||
-    die 'Could not find conda-forge.yml, is this really the CondaForge' \
-        'staged-recipes repo?'
+[ -f "$ci_conf_file" ] ||
+    die "Could not find file $ci_conf_file, is this really the $service_name" \
+        'recipes repo?'
 
 # Ensure this is a git repo
 git_stat="$(git status --short)" || die 'This is not a git repo!'
@@ -268,17 +279,17 @@ ver="$(get_dist_version "$dist_file")"
 
 # Checkout new branch with package name.
 package="$(make_package_name "$perl_module")"
-echo "### Making recipe for CondaForge package '$package' from Perl module" \
+echo "### Making recipe for $service_name package '$package' from Perl module" \
      "'$perl_module' (version $ver) in distribution '$dist_file'"
 if [ -z "$in_current_branch" ]; then
     # Ensure worktree is clean
     [ -z "$git_stat" ] || die 'git status of repo not clean.'
 
-    echo '### Updating main branch'
-    git checkout main
-    git pull upstream main ||
-        die 'Could not update main branch. Make sure remote "upstream" exists' \
-            'and links to CondaForge staged-recipes'
+    echo "### Updating $main_branch branch"
+    git checkout "$main_branch"
+    git pull upstream "$main_branch" ||
+        die "Could not update $main_branch branch. Make sure remote" \
+            "'upstream' exists and links to $service_name's recipes repo"
     echo '### Creating new branch'
     git checkout -b "$package"
 fi
@@ -337,7 +348,7 @@ cat <<END_OF_MSG
 ### All done. When you are ready, clean, commit and try to build locally:
 
 # Enter repo:
-cd '$cf_repo_dir'
+cd '$repo_dir'
 
 
 # Inspect recipe:
