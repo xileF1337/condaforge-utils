@@ -66,6 +66,8 @@ Usage:  $SCRIPT_NAME [ARGS] PERL_MODULE
 Arguments:  [...] denotes default values, xx doubles, ii ints, ss strings
     -r ss:  Path to your fork of CondaForge staged-recipes repository. [.]
     -b:     Stay in the current branch instead of creating a new one.
+    -B:     BioConda mode. Prepare a recipe in the BioConda recipes repo. Note
+            that the recipes themselves are not adapted to BioConda (yet).
     -v:     Be verbose and show debug messages.
     -h:     Display this help and exit.
 EndOfUsage
